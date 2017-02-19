@@ -1,4 +1,5 @@
-% <purpose of this file>
+% Demonstrate the linear Kalman filter class with the example of a moving
+% object with constant acceleration.
 %
 % Author:  J.-A. Adrian (JA) <jensalrik.adrian AT gmail.com>
 % Date  :  05-Feb-2017 14:04:51
@@ -13,7 +14,7 @@ sampleRate = 10;
 
 duration = round(lenSec * sampleRate);
 
-
+% stateTransition * state describes the linear motion of the object
 stateTransition = [
     1 1/sampleRate;
     0  1
@@ -24,6 +25,8 @@ controlMatrix = [
     1/sampleRate
     ];
 
+% let's not use the velocity, since the observer cannot evaluate the
+% volicity in our example.
 measurementMatrix = [
     1 0
     ];
@@ -34,30 +37,30 @@ acceleration = 1.5;
 % initial state
 state = [0; 0]; 
 
-processNoiseMag = 0.05; % process noise: the variability in how fast 
-                        % the Quail is speeding up (stdv of acceleration:
-                        % meters/sec^2)
+processNoise = 0.05; % process noise: the variability in how fast 
+                     % the Quail is speeding up (stdv of acceleration:
+                     % meters/sec^2)
                               
-measurementNoiseMag = 10;   % measurement noise: How blind is the 
+measurementNoise = 10;   % measurement noise: How blind is the 
                             % observer (stdv of location, in meters)
 
 % Ez convert the measurement noise (stdv) into covariance matrix
-Ez = measurementNoiseMag^2;
+Ez = measurementNoise^2;
                               
 % Ex convert the process noise (stdv) into covariance matrix
-Ex = controlMatrix * controlMatrix.' * processNoiseMag^2;
+Ex = controlMatrix * controlMatrix.' * processNoise^2;
 
 % estimate of initial state variance (covariance matrix)
 P = Ex;
 
 
+%% Get the Measurement Vector
 measurement  = zeros(duration, 1);
 velocityTrue = zeros(duration, 1);
 measurementTrue = zeros(duration, 1);
-%% Get the Measurement Vector
 for iSample = 1:duration
     % Generate the object flight
-    accelNoise = processNoiseMag * ...
+    accelNoise = processNoise * ...
         [
             ((1/sampleRate)^2/2) * randn(); 
             (1/sampleRate) * randn()
@@ -66,7 +69,7 @@ for iSample = 1:duration
     state = stateTransition * state + controlMatrix * acceleration + accelNoise;
     
     % Generate what the observer sees
-    observerVisionNoise = measurementNoiseMag * randn();
+    observerVisionNoise = measurementNoise * randn();
     y = measurementMatrix * state + observerVisionNoise;
     
     measurementTrue(iSample) = state(1);
@@ -88,14 +91,16 @@ kalman = LinearKalmanFilter(...
     'ControlInput',              acceleration, ...
     'InitialState',              initialState, ...
     'InitialEstimateCovariance', P, ...
-    'ProcessNoise',              processNoiseMag, ...
-    'MeasurementNoise',          measurementNoiseMag ...
+    'ProcessNoise',              processNoise, ...
+    'MeasurementNoise',          measurementNoise ...
     );
 
 
 thisState = zeros(duration, 2);
-for thisSample = 1:duration
-    thisState(thisSample, :) = kalman(measurement(thisSample));
+for iSample = 1:duration
+    thisMeasurement = measurement(iSample);
+    
+    thisState(iSample, :) = kalman.step(thisMeasurement);
 end
 
 
