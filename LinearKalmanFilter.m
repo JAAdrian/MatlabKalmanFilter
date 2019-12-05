@@ -62,7 +62,7 @@ methods (Access = protected)
         self.ProcessNoiseCovariance = self.InitialEstimateCovariance;
     end
     
-    function [thisState] = stepImpl(self, measurement)
+    function [state] = stepImpl(self, measurement)
         %%%%%%%%%%%%%%%%%%%%%%%
         %%% Predcition step %%%
         %%%%%%%%%%%%%%%%%%%%%%%
@@ -78,11 +78,8 @@ methods (Access = protected)
         
         % Kalman Gain
         denom = ...
-            self.MeasurementMatrix * ...
-            self.EstimateCovariance * ...
-            self.MeasurementMatrix.' + ...
-            self.MeasurementCovariance;
-        KalGain = self.EstimateCovariance * self.MeasurementMatrix.' * pinv(denom);
+            self.MeasurementMatrix * self.EstimateCovariance * self.MeasurementMatrix.' + self.MeasurementCovariance;
+        KalmanGain = self.EstimateCovariance * self.MeasurementMatrix.' * pinv(denom);
         
         %%%%%%%%%%%%%%%%%%%
         %%% Update step %%%
@@ -90,16 +87,16 @@ methods (Access = protected)
         residual = measurement - self.MeasurementMatrix * self.StateEstimate;
         
         % state update
-        self.StateEstimate = self.StateEstimate + KalGain * residual;
+        self.StateEstimate = self.StateEstimate + KalmanGain * residual;
         
         % Covariance update
         identMatrix = eye(size(self.StateEstimate, 1));
         self.EstimateCovariance = ...
-            (identMatrix - KalGain * self.MeasurementMatrix) * ...
+            (identMatrix - KalmanGain * self.MeasurementMatrix) * ...
             self.EstimateCovariance;
         
         
-        thisState = self.StateEstimate;
+        state = self.StateEstimate;
     end
     
     function resetImpl(self)
