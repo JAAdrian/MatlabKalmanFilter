@@ -1,23 +1,10 @@
 classdef LinearKalmanFilter < matlab.System
-%LINEARKALMANFILTER <purpose in one line!>
+%LINEARKALMANFILTER Implements the Kalman filter as a System Object
 % -------------------------------------------------------------------------
 % Implementation and naming convention following Wikipedia:
 % https://en.wikipedia.org/wiki/Kalman_filter
 %
-% Linear Properties:
-%	propA - <description>
-%	propB - <description>
-%
-% Linear Methods:
-%	doThis - <description>
-%	doThat - <description>
-%
-% Author :  J.-A. Adrian (JA) <jensalrik.adrian AT gmail.com>
-% Date   :  05-Feb-2017 13:58:22
-%
 
-% History:  v0.1   initial version, 05-Feb-2017 (JA)
-%
 
 
 
@@ -55,46 +42,40 @@ end
 
 methods (Access = protected)
     function setupImpl(self)
-        self.StateEstimate      = self.InitialState;
+        self.StateEstimate = self.InitialState;
         self.EstimateCovariance = self.InitialEstimateCovariance;
         
-        self.MeasurementCovariance  = self.MeasurementNoise .^ 2;
+        self.MeasurementCovariance = self.MeasurementNoise .^ 2;
         self.ProcessNoiseCovariance = self.InitialEstimateCovariance;
     end
     
     function [state] = stepImpl(self, measurement)
-        %%%%%%%%%%%%%%%%%%%%%%%
-        %%% Predcition step %%%
-        %%%%%%%%%%%%%%%%%%%%%%%
         % state prediction
         self.StateEstimate = ...
-            self.StateTransition * self.StateEstimate + ...
-            self.ControlMatrix * self.ControlInput;
+            self.StateTransition * self.StateEstimate ...
+            + self.ControlMatrix * self.ControlInput;
         
         % state covariance prediction
         self.EstimateCovariance = ...
-            (self.StateTransition * self.EstimateCovariance * self.StateTransition.') + ...
-            self.ProcessNoiseCovariance;
+            (self.StateTransition * self.EstimateCovariance * self.StateTransition.') ...
+            + self.ProcessNoiseCovariance;
         
         % Kalman Gain
-        denom = ...
-            self.MeasurementMatrix * self.EstimateCovariance * self.MeasurementMatrix.' + self.MeasurementCovariance;
-        KalmanGain = self.EstimateCovariance * self.MeasurementMatrix.' * pinv(denom);
+        innovationCovariance = self.MeasurementMatrix * self.EstimateCovariance * self.MeasurementMatrix.' ...
+            + self.MeasurementCovariance;
+        kalmanGain = self.EstimateCovariance * self.MeasurementMatrix.' * pinv(innovationCovariance);
         
-        %%%%%%%%%%%%%%%%%%%
-        %%% Update step %%%
-        %%%%%%%%%%%%%%%%%%%
+        % the residual between measurement and prediction
         residual = measurement - self.MeasurementMatrix * self.StateEstimate;
         
         % state update
-        self.StateEstimate = self.StateEstimate + KalmanGain * residual;
+        self.StateEstimate = self.StateEstimate + kalmanGain*residual;
         
         % Covariance update
-        identMatrix = eye(size(self.StateEstimate, 1));
+        identyMatrix = eye(size(self.StateEstimate, 1));
         self.EstimateCovariance = ...
-            (identMatrix - KalmanGain * self.MeasurementMatrix) * ...
-            self.EstimateCovariance;
-        
+            (identyMatrix - kalmanGain*self.MeasurementMatrix) ...
+            * self.EstimateCovariance;
         
         state = self.StateEstimate;
     end

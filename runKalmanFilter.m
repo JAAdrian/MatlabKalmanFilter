@@ -21,15 +21,13 @@ stateTransition = [
     ];
 
 controlMatrix = [
-    (1/sampleRate)^2/2; 
+    (1/sampleRate)^2 / 2; 
     1/sampleRate
     ];
 
 % let's not use the velocity, since the observer cannot evaluate the
-% volicity in our example.
-measurementMatrix = [
-    1 0
-    ];
+% velocity in our example.
+measurementMatrix = [1, 0];
 
 % define acceleration magnitude
 acceleration = 1.5;
@@ -42,7 +40,7 @@ processNoise = 0.05; % process noise: the variability in how fast
                      % meters/sec^2)
                               
 measurementNoise = 10;   % measurement noise: How blind is the 
-                            % observer (stdv of location, in meters)
+                         % observer (stdv of location, in meters)
 
 % Ez convert the measurement noise (stdv) into covariance matrix
 Ez = measurementNoise^2;
@@ -73,9 +71,9 @@ for iSample = 1:duration
     y = measurementMatrix * state + observerVisionNoise;
     
     measurementTrue(iSample) = state(1);
-    velocityTrue(iSample)    = state(2);
+    velocityTrue(iSample) = state(2);
     
-    measurement(iSample) = y;
+    measurement(iSample) = y(1);
 end
 
 
@@ -87,7 +85,7 @@ initialState = [0; 0];
 kalman = LinearKalmanFilter(...
     'StateTransition',           stateTransition, ...
     'ControlMatrix',             controlMatrix, ...
-    'MeasurementMatrix' ,        measurementMatrix, ...
+    'MeasurementMatrix',         measurementMatrix, ...
     'ControlInput',              acceleration, ...
     'InitialState',              initialState, ...
     'InitialEstimateCovariance', P, ...
@@ -100,7 +98,7 @@ thisState = zeros(duration, 2);
 for iSample = 1:duration
     thisMeasurement = measurement(iSample);
     
-    thisState(iSample, :) = kalman.step(thisMeasurement);
+    thisState(iSample, :) = kalman(thisMeasurement);
 end
 
 
